@@ -12,6 +12,8 @@ class OCRBuilder():
         self.max_year = max_year
 
         self.dc = ElementTree.fromstring(requests.get(self.file_dict['dc']).text)
+
+        ElementTree.register_namespace('xtf', 'http://cdlib.org/xtf')
         
     def get_jpg_size(self, i):
         return Image.open(requests.get(self.file_dict['jpgs'][i], stream=True).raw).size
@@ -49,94 +51,120 @@ class OCRBuilder():
     def get_year_range(self):
         return '%s-%s' % (self.min_year, self.max_year)
 
-    def get_metadata_node(self):
-        ElementTree.register_namespace('http://cdlib.org/xtf','xtf')
-    
-        xtf_converted_book = ElementTree.Element('xtf-converted-book')
-        meta = ElementTree.SubElement(xtf_converted_book, 'xtf:meta')
+    def get_human_readable_date(self):
+        months = {
+            '01': 'January',
+            '02': 'February',
+            '03': 'March',
+            '04': 'April',
+            '05': 'May',
+            '06': 'June',
+            '07': 'July',
+            '08': 'August',
+            '09': 'September',
+            '10': 'October',
+            '11': 'November',
+            '12': 'December'
+        }
+        d = self.get_dc_date().split('-')
+        if len(d) == 1: # year
+            return d[0]
+        elif len(d) == 2: # month  year
+            return '%s %s' % (months[d[1]], d[0])
+        else:
+            return '%s %d, %s' % (months[d[1]], int(d[2]), d[0])
+
+    def get_meta(self):
+        meta = ElementTree.Element('{http://cdlib.org/xtf}meta')
         ElementTree.SubElement(meta, 'facet-sidebartitle', attrib={
-            'xtf:meta': 'true',
-            'xtf:facet': 'yes',
-            'xtf:tokenize': 'no'
+            '{http://cdlib.org/xtf}meta': 'true',
+            '{http://cdlib.org/xtf}facet': 'yes',
+            '{http://cdlib.org/xtf}tokenize': 'no'
         }).text = '%s::Volume %02d' % (self.get_dc_title(), self.get_volume_number())
 
         ElementTree.SubElement(meta, 'facet-title', attrib={
-            'xtf:meta': 'true',
-            'xtf:facet': 'yes',
-            'xtf:tokenize': 'no'
+            '{http://cdlib.org/xtf}meta': 'true',
+            '{http://cdlib.org/xtf}facet': 'yes',
+            '{http://cdlib.org/xtf}tokenize': 'no'
         }).text = '%s::Volume %02d' % (self.get_dc_title(), self.get_volume_number())
 
         ElementTree.SubElement(meta, 'browse-title', attrib={
-            'xtf:meta': 'true',
-            'xtf:facet': 'no',
-            'xtf:tokenize': 'yes'
+            '{http://cdlib.org/xtf}meta': 'true',
+            '{http://cdlib.org/xtf}facet': 'no',
+            '{http://cdlib.org/xtf}tokenize': 'yes'
         }).text = '%s Volume %02d' % (self.get_dc_title(), self.get_volume_number())
 
         ElementTree.SubElement(meta, 'facet-date', attrib={
-            'xtf:meta': 'true',
-            'xtf:facet': 'yes',
-            'xtf:tokenize': 'no'
+            '{http://cdlib.org/xtf}meta': 'true',
+            '{http://cdlib.org/xtf}facet': 'yes',
+            '{http://cdlib.org/xtf}tokenize': 'no'
         }).text = '%s::%s' % (self.get_decade(), self.get_year())
 
         ElementTree.SubElement(meta, 'browse-date', attrib={
-            'xtf:meta': 'true',
-            'xtf:facet': 'no',
-            'xtf:tokenize': 'yes'
+            '{http://cdlib.org/xtf}meta': 'true',
+            '{http://cdlib.org/xtf}facet': 'no',
+            '{http://cdlib.org/xtf}tokenize': 'yes'
         }).text = '%s %s' % (self.get_decade(), self.get_year())
 
         ElementTree.SubElement(meta, 'range-date', attrib={
-            'xtf:meta': 'true',
-            'xtf:facet': 'no',
-            'xtf:tokenize': 'no'
+            '{http://cdlib.org/xtf}meta': 'true',
+            '{http://cdlib.org/xtf}facet': 'no',
+            '{http://cdlib.org/xtf}tokenize': 'no'
         }).text = self.get_year()
 
         ElementTree.SubElement(meta, 'facet-category', attrib={
-            'xtf:meta': 'true',
-            'xtf:facet': 'yes',
-            'xtf:tokenize': 'no'
+            '{http://cdlib.org/xtf}meta': 'true',
+            '{http://cdlib.org/xtf}facet': 'yes',
+            '{http://cdlib.org/xtf}tokenize': 'no'
         }).text = '%s::%s' % (self.get_publication_type(), self.get_dc_title())
 
         ElementTree.SubElement(meta, 'browse-category', attrib={
-            'xtf:meta': 'true',
-            'xtf:facet': 'no',
-            'xtf:tokenize': 'yes'
+            '{http://cdlib.org/xtf}meta': 'true',
+            '{http://cdlib.org/xtf}facet': 'no',
+            '{http://cdlib.org/xtf}tokenize': 'yes'
         }).text = self.get_publication_type()
 
         ElementTree.SubElement(meta, 'sort-identifier', attrib={
-            'xtf:meta': 'true',
-            'xtf:facet': 'no',
-            'xtf:tokenize': 'no'
+            '{http://cdlib.org/xtf}meta': 'true',
+            '{http://cdlib.org/xtf}facet': 'no',
+            '{http://cdlib.org/xtf}tokenize': 'no'
         }).text = self.get_dc_identifier()
 
         ElementTree.SubElement(meta, 'display-title', attrib={
-            'xtf:meta': 'true',
-            'xtf:facet': 'no',
-            'xtf:tokenize': 'no'
+            '{http://cdlib.org/xtf}meta': 'true',
+            '{http://cdlib.org/xtf}facet': 'no',
+            '{http://cdlib.org/xtf}tokenize': 'no'
         }).text = '%s (%s)' % (self.get_dc_title(), self.get_year_range())
 
         ElementTree.SubElement(meta, 'display-item', attrib={
-            'xtf:meta': 'true',
-            'xtf:facet': 'no',
-            'xtf:tokenize': 'no'
+            '{http://cdlib.org/xtf}meta': 'true',
+            '{http://cdlib.org/xtf}facet': 'no',
+            '{http://cdlib.org/xtf}tokenize': 'no'
         }).text = 'Volume %s (%s)' % (self.get_volume_number(), self.get_year())
 
         ElementTree.SubElement(meta, 'browse-description', attrib={
-            'xtf:meta': 'true',
-            'xtf:facet': 'no',
-            'xtf:tokenize': 'yes'
+            '{http://cdlib.org/xtf}meta': 'true',
+            '{http://cdlib.org/xtf}facet': 'no',
+            '{http://cdlib.org/xtf}tokenize': 'yes'
         }).text = self.get_dc_description()
 
         ElementTree.SubElement(meta, 'year', attrib={
-            'xtf:meta': 'true',
-            'xtf:facet': 'no',
-            'xtf:tokenize': 'no'
+            '{http://cdlib.org/xtf}meta': 'true',
+            '{http://cdlib.org/xtf}facet': 'no',
+            '{http://cdlib.org/xtf}tokenize': 'no'
         }).text = self.get_year()
 
         ElementTree.SubElement(meta, 'facet-volume', attrib={
-            'xtf:meta': 'true',
-            'xtf:facet': 'no',
-            'xtf:tokenize': 'no'
-        }).text = str(self.get_volume_number())
+            '{http://cdlib.org/xtf}meta': 'true',
+            '{http://cdlib.org/xtf}facet': 'no',
+            '{http://cdlib.org/xtf}tokenize': 'no'
+        }).text = 'Volume %d' % self.get_volume_number()
+
+        ElementTree.SubElement(meta, 'human-readable-date', attrib={
+            '{http://cdlib.org/xtf}meta': 'true',
+            '{http://cdlib.org/xtf}facet': 'no',
+            '{http://cdlib.org/xtf}tokenize': 'no'
+        }).text = self.get_human_readable_date()
 
         return meta
 
@@ -156,9 +184,8 @@ class OCRBuilder():
 
     # in PHP I used mb_convert_encoding($fields[4], "UTF-8", "ISO-8859-1") on 'text'
     def get_position_data_from_alto(self, xml, scale):
-        ElementTree.registerNamespace('a', 'http://www.loc.gov/standards/alto/ns-v2#')
         fields = []
-        for string in xml.findall('a:string'):
+        for string in xml.findall('.//{http://www.loc.gov/standards/alto/ns-v2#}String'):
             fields.append({
                 'x': int(float(string.get('HPOS')) * scale),
                 'y': int(float(string.get('VPOS')) * scale),
@@ -170,20 +197,23 @@ class OCRBuilder():
     
     def get_position_data(self, i):
         scale = self.get_jpg_tif_ratio(i)
-        data_str = requests.get(self.ocr_files[i]).text
+        data_str = requests.get(self.file_dict['ocr_files'][i]).text
         try:
             xml = ElementTree.fromstring(data_str)
-        except ParseError:
+        except ElementTree.ParseError:
             return self.get_position_data_from_pos(data_str, scale)
 
         return self.get_position_data_from_alto(xml, scale)
 
     def get_structural_dict(self):
-        data_str = requests.get(self.data_files['txt']).text
+        data_str = requests.get(self.file_dict['txt']).text
         output = {}
-        for line in data_str.explode('\n'):
-            fields = line.explode('\t')
-            output[fields[0]] = fields[1]
+        for line in data_str.split('\n'):
+            fields = line.split('\t')
+            if len(fields) < 2:
+                continue
+            if fields[0][0] == '0':
+                output[fields[0]] = fields[1]
         return output 
 
     #
@@ -317,83 +347,91 @@ class OCRBuilder():
     def spacing_to_string(self, spacing):
         return ' '.join([str(space) for space in spacing])
 
-    # leaf_num is an eight digit string, like '00000001'
-    def build_xml_leaf(self, leaf_data, leaf_num, human_readable_leaf_num):
-        '''
-        JUST AN EXAMPLE FROM ABOVE...
-        ElementTree.SubElement(meta, 'facet-sidebartitle', attrib={
-            'xtf:meta': 'true',
-            'xtf:facet': 'yes',
-            'xtf:tokenize': 'no'
-        }).text = '%s::Volume %02d' % (self.get_dc_title(), self.get_volume_number())
-        '''
+    def get_leaf(self, n):
+        leaf_num = '%08d' % (n + 1)
+        human_readable_leaf_num = str(n + 1)
+        jpg_size = self.get_jpg_size(n)
 
-        jpg_size = self.get_jpg_size(int(leaf_num))
-    
         leaf = ElementTree.Element('leaf', attrib={
-            'leafNum': leaf_num.lstrip('0'),
+            'leafNum': human_readable_leaf_num,
             'type': '',
             'access': 'true',
             'imgFile': '%s.jpg' % leaf_num,
-            'x': jpg_size[0],
-            'y': jpg_size[1],
+            'x': str(jpg_size[0]),
+            'y': str(jpg_size[1]),
             'humanReadableLeafNum': human_readable_leaf_num,
-            'xtf:sectionType': leaf_num
+            '{http://cdlib.org/xtf}sectionType': leaf_num
         })
-   
-        # need namespace: xtf = http://cdlib.org/xtf
-   
-        ElementTree.SubElement(leaf, 'cropBox', attrib={ 
-            'x': jpg_size[0],
-            'y': jpg_size[1],
-            'w': jpg_size[0],
-            'h': jpg_size[1]
+
+        cropBox = ElementTree.SubElement(leaf, 'cropBox', attrib={ 
+            'x': str(jpg_size[0]),
+            'y': str(jpg_size[1]),
+            'w': str(jpg_size[0]),
+            'h': str(jpg_size[1])
         })
-    
+
+        leaf_data = self.leaf_data_from_pos_data(n)
+        scale = self.get_jpg_tif_ratio(n)
+        leaf_data = self.scale_leaf_data(leaf_data, scale)
+
+        # Add line spacing info to each line. This has to happen after scaling.
+        i = 0
+        while i < len(leaf_data):
+            leaf_data[i]['spacing'] = self.get_line_spacing(leaf_data, i)
+            i = i + 1
+
         l = 0
         for line in leaf_data:
-            line_element = ElementTree.SubElement(leaf, 'line', attrib={
-                'l': line['l'],
-                't': line['t'],
-                'r': line['r'],
-                'b': line['b'],
+            ElementTree.SubElement(cropBox, 'line', attrib={
+                'l': str(line['l']),
+                't': str(line['t']),
+                'r': str(line['r']),
+                'b': str(line['b']),
                 'spacing': spacingToString(line['spacing'])
-            }).text = self.get_line_text(self, line)
+            }).text = self.get_line_text(line)
             l = l + 1
+
         return leaf
 
-    def build_xml(self):
-        structural_dict = o.get_structural_dict
-        #JEJ
-        for leaf_num in range(len(o['ocr_files'])):
-            leaf_data = o.leaf_data_from_pos_data(leaf_num)
-
-            leaf_data = o.scale_leaf_data(leaf_data, o.get_scale(i))
-
-            # Add line spacing info to each line. This has to happen after scaling.
-            i = 0
-            while i < len(leaf_data):
-                leaf_data[i]['spacing'] = o.get_line_spacing(leaf_data, i)
-                i = i + 1
+    def get_xtf_converted_book(self):
+        x = ElementTree.Element('xtf-converted-book')
+        x.append(self.get_meta())
+        for i in range(len(self.file_dict['ocr_files'])):
+            x.append(self.get_leaf(i))
+        return x
 
 #
 # MAIN 
 #
 
 o = OCRBuilder({
-    'dc': 'http://campub-xtf.lib.uchicago.edu/xtf/data/bookreader/mvol-0005-0001-0001/mvol-0005-0001-0001.dc.xml',
+    'dc': 'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/mvol-0002-0003-0005.dc.xml',
     'jpgs': [
-        'http://campub-xtf.lib.uchicago.edu/xtf/data/bookreader/mvol-0005-0001-0001/00000001.jpg'
+        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0001.jpg',
+        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0002.jpg',
+        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0003.jpg',
+        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0004.jpg',
+        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0005.jpg',
     ],
     'ocr_files': [
-        'http://campub-xtf.lib.uchicago.edu/xtf/data/bookreader/mvol-0005-0001-0001/00000001.jpg'
+        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0001.xml',
+        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0002.xml',
+        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0003.xml',
+        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0004.xml',
+        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0005.xml',
     ],
     'tifs': [
-        'http://campub-xtf.lib.uchicago.edu/xtf/data/bookreader/mvol-0005-0001-0001/00000001.jpg'
+        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0001.tif',
+        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0002.tif',
+        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0003.tif',
+        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0004.tif',
+        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0005.tif',
     ],
-    'txt': 'http://campub-xtf.lib.uchicago.edu/xtf/data/bookreader/mvol-0005-0001-0001/mvol-0005-0001-0001.txt',
+    'txt': 'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/mvol-0002-0003-0005.struct.txt'
 }, 1900, 2000)
 
+xtf_converted_book = o.get_xtf_converted_book()
+print(ElementTree.tostring(xtf_converted_book, encoding='utf-8', method='xml').decode('utf-8'))
 
 
 
