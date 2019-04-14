@@ -400,38 +400,32 @@ class OCRBuilder():
             x.append(self.get_leaf(i))
         return x
 
-#
-# MAIN 
-#
-
-o = OCRBuilder({
-    'dc': 'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/mvol-0002-0003-0005.dc.xml',
-    'jpgs': [
-        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0001.jpg',
-        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0002.jpg',
-        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0003.jpg',
-        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0004.jpg',
-        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0005.jpg',
-    ],
-    'ocr_files': [
-        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0001.xml',
-        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0002.xml',
-        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0003.xml',
-        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0004.xml',
-        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0005.xml',
-    ],
-    'tifs': [
-        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0001.tif',
-        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0002.tif',
-        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0003.tif',
-        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0004.tif',
-        'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0005.tif',
-    ],
-    'txt': 'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/mvol-0002-0003-0005.struct.txt'
-}, 1900, 2000)
-
-xtf_converted_book = o.get_xtf_converted_book()
-print(ElementTree.tostring(xtf_converted_book, encoding='utf-8', method='xml').decode('utf-8'))
-
-
-
+if __name__=='__main__':
+    o = OCRBuilder({
+        'dc': 'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/mvol-0002-0003-0005.dc.xml',
+        'jpgs': [
+            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0001.jpg',
+            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0002.jpg',
+            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0003.jpg',
+            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0004.jpg',
+            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0005.jpg',
+        ],
+        'ocr_files': [
+            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0001.xml',
+            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0002.xml',
+            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0003.xml',
+            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0004.xml',
+            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0005.xml',
+        ],
+        'tifs': [
+            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0001.tif',
+            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0002.tif',
+            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0003.tif',
+            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0004.tif',
+            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0005.tif',
+        ],
+        'txt': 'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/mvol-0002-0003-0005.struct.txt'
+    }, 1900, 2000)
+    
+    xtf_converted_book = o.get_xtf_converted_book()
+    print(ElementTree.tostring(xtf_converted_book, encoding='utf-8', method='xml').decode('utf-8'))
