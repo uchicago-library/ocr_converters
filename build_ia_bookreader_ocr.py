@@ -1,6 +1,26 @@
-from PIL import Image
-import requests
+#!/usr/bin/env python3
+
+"""Usage:
+   build_ia_bookreader_ocr --local-root=<path> <identifier> <min-year> <max-year>
+"""
+
+import os, sys
 import xml.etree.ElementTree as ElementTree
+from PIL import Image
+from docopt import docopt
+
+def list_mvol_files(local_root, identifier, subdir):
+    subdir_path = '{}{}{}{}{}'.format(
+        local_root,
+        os.sep,
+        identifier.replace('-', os.sep),
+        os.sep,
+        subdir
+    )
+    files = []
+    for f in os.listdir(subdir_path):
+        files.append('{}{}{}'.format(subdir_path, os.sep, f))
+    return files
 
 class OCRBuilder():
     def __init__(self, file_dict, min_year, max_year):
@@ -11,15 +31,15 @@ class OCRBuilder():
         self.min_year = min_year 
         self.max_year = max_year
 
-        self.dc = ElementTree.fromstring(requests.get(self.file_dict['dc']).text)
+        self.dc = ElementTree.fromstring(open(self.file_dict['dc']).read())
 
         ElementTree.register_namespace('xtf', 'http://cdlib.org/xtf')
         
     def get_jpg_size(self, i):
-        return Image.open(requests.get(self.file_dict['jpgs'][i], stream=True).raw).size
+        return Image.open(self.file_dict['jpgs'][i]).size
 
     def get_tif_size(self, i):
-        return Image.open(requests.get(self.file_dict['tifs'][i], stream=True).raw).size
+        return Image.open(self.file_dict['tifs'][i]).size
 
     def get_jpg_tif_ratio(self, i):
         return float(self.get_jpg_size(i)[1]) / float(self.get_tif_size(i)[1])
@@ -197,7 +217,7 @@ class OCRBuilder():
     
     def get_position_data(self, i):
         scale = self.get_jpg_tif_ratio(i)
-        data_str = requests.get(self.file_dict['ocr_files'][i]).text
+        data_str = open(self.file_dict['ocr_files'][i]).read()
         try:
             xml = ElementTree.fromstring(data_str)
         except ElementTree.ParseError:
@@ -206,7 +226,7 @@ class OCRBuilder():
         return self.get_position_data_from_alto(xml, scale)
 
     def get_structural_dict(self):
-        data_str = requests.get(self.file_dict['txt']).text
+        data_str = open(self.file_dict['txt']).read()
         output = {}
         for line in data_str.split('\n'):
             fields = line.split('\t')
@@ -340,7 +360,7 @@ class OCRBuilder():
 
     def get_line_text(self, line):
         if 'words' in line:
-            return ' '.join([word['text'] for word in line['word']])
+            return ' '.join([word['text'] for word in line['words']])
         else:
             return ''
 
@@ -387,7 +407,7 @@ class OCRBuilder():
                 't': str(line['t']),
                 'r': str(line['r']),
                 'b': str(line['b']),
-                'spacing': spacingToString(line['spacing'])
+                'spacing': self.spacing_to_string(line['spacing'])
             }).text = self.get_line_text(line)
             l = l + 1
 
@@ -401,31 +421,37 @@ class OCRBuilder():
         return x
 
 if __name__=='__main__':
+    arguments = docopt(__doc__)
+
+    mvol_path = '{}{}{}{}'.format(
+        arguments['--local-root'],
+        os.sep,
+        arguments['<identifier>'].replace('-', os.sep),
+        os.sep
+    )
+
     o = OCRBuilder({
-        'dc': 'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/mvol-0002-0003-0005.dc.xml',
-        'jpgs': [
-            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0001.jpg',
-            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0002.jpg',
-            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0003.jpg',
-            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0004.jpg',
-            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/JPEG/mvol-0002-0003-0005_0005.jpg',
-        ],
-        'ocr_files': [
-            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0001.xml',
-            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0002.xml',
-            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0003.xml',
-            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0004.xml',
-            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/ALTO/mvol-0002-0003-0005_0005.xml',
-        ],
-        'tifs': [
-            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0001.tif',
-            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0002.tif',
-            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0003.tif',
-            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0004.tif',
-            'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/TIFF/mvol-0002-0003-0005_0005.tif',
-        ],
-        'txt': 'https://raw.githubusercontent.com/johnjung/campus-test/gh-pages/mvol-0002-0003-0005.struct.txt'
-    }, 1900, 2000)
+            'dc': '{}{}.dc.xml'.format(mvol_path, arguments['<identifier>']),
+            'jpgs': list_mvol_files(
+                arguments['--local-root'], 
+                arguments['<identifier>'],
+                'JPEG'
+            ),
+            'ocr_files': list_mvol_files(
+                arguments['--local-root'], 
+                arguments['<identifier>'],
+                'ALTO'
+            ),
+            'tifs': list_mvol_files(
+                arguments['--local-root'], 
+                arguments['<identifier>'],
+                'TIFF'
+            ),
+            'txt': '{}{}.struct.txt'.format(mvol_path, arguments['<identifier>'])
+        }, 
+        int(arguments['<min-year>']),
+        int(arguments['<max-year>'])
+    )
     
     xtf_converted_book = o.get_xtf_converted_book()
     print(ElementTree.tostring(xtf_converted_book, encoding='utf-8', method='xml').decode('utf-8'))
