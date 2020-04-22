@@ -10,6 +10,9 @@ from PIL import Image
 from docopt import docopt
 
 def list_mvol_files(local_root, identifier, subdir):
+    '''Get a list of complete paths to mvol files in ALTO, JPEG, or TIFF
+       directories
+    '''
     subdir_path = '{}{}{}{}{}'.format(
         local_root,
         os.sep,
@@ -36,40 +39,35 @@ class OCRBuilder():
         ElementTree.register_namespace('xtf', 'http://cdlib.org/xtf')
         
     def get_jpg_size(self, i):
+        ''' Get the size of a jpeg from the self.file_dict['jpgs'] list.
+        '''
         return Image.open(self.file_dict['jpgs'][i]).size
 
     def get_tif_size(self, i):
+        ''' Get the size of a tiff from the self.file_dict['tifs'] list.
+        '''
         return Image.open(self.file_dict['tifs'][i]).size
 
     def get_jpg_tif_ratio(self, i):
+        ''' Get the amount that jpegs "shrunk" compared to tiffs, so we
+            can rescale OCR data.
+        '''
         return float(self.get_jpg_size(i)[1]) / float(self.get_tif_size(i)[1])
     
-    def get_dc_date(self):
-        return self.dc.find('date').text
-
-    def get_dc_description(self):
-        return self.dc.find('description').text
-
-    def get_dc_identifier(self):
-        return self.dc.find('identifier').text
-        
-    def get_dc_title(self):
-        return self.dc.find('title').text
-
     def get_decade(self):
         return "%s0's" % self.get_year()[0:3]
 
     def get_publication_type(self):
-        return 'student' if self.get_dc_title() in ('Cap and Gown', 'Daily Maroon') else 'university'
+        return 'student' if self.dc.find('title').text in ('Cap and Gown', 'Daily Maroon') else 'university'
 
     def get_volume_number(self):
-        return int(self.get_dc_identifier().split('-')[2].lstrip('0'))
+        return int(self.dc.find('identifier').text.split('-')[2].lstrip('0'))
 
     def get_year(self):
-        return self.get_dc_date().split('-')[0]
-
-    def get_year_range(self):
-        return '%s-%s' % (self.min_year, self.max_year)
+        ''' Get the year from a date string embedded in DC data- e.g.
+            2020-04-22 to 2020.
+        '''
+        return self.dc.find('date').text.split('-')[0]
 
     def get_human_readable_date(self):
         months = {
@@ -86,7 +84,7 @@ class OCRBuilder():
             '11': 'November',
             '12': 'December'
         }
-        d = self.get_dc_date().split('-')
+        d = self.dc.find('date').text.split('-')
         if len(d) == 1: # year
             return d[0]
         elif len(d) == 2: # month  year
@@ -100,19 +98,19 @@ class OCRBuilder():
             '{http://cdlib.org/xtf}meta': 'true',
             '{http://cdlib.org/xtf}facet': 'yes',
             '{http://cdlib.org/xtf}tokenize': 'no'
-        }).text = '%s::Volume %02d' % (self.get_dc_title(), self.get_volume_number())
+        }).text = '%s::Volume %02d' % (self.dc.find('title').text, self.get_volume_number())
 
         ElementTree.SubElement(meta, 'facet-title', attrib={
             '{http://cdlib.org/xtf}meta': 'true',
             '{http://cdlib.org/xtf}facet': 'yes',
             '{http://cdlib.org/xtf}tokenize': 'no'
-        }).text = '%s::Volume %02d' % (self.get_dc_title(), self.get_volume_number())
+        }).text = '%s::Volume %02d' % (self.dc.find('title').text, self.get_volume_number())
 
         ElementTree.SubElement(meta, 'browse-title', attrib={
             '{http://cdlib.org/xtf}meta': 'true',
             '{http://cdlib.org/xtf}facet': 'no',
             '{http://cdlib.org/xtf}tokenize': 'yes'
-        }).text = '%s Volume %02d' % (self.get_dc_title(), self.get_volume_number())
+        }).text = '%s Volume %02d' % (self.dc.find('title').text, self.get_volume_number())
 
         ElementTree.SubElement(meta, 'facet-date', attrib={
             '{http://cdlib.org/xtf}meta': 'true',
@@ -136,7 +134,7 @@ class OCRBuilder():
             '{http://cdlib.org/xtf}meta': 'true',
             '{http://cdlib.org/xtf}facet': 'yes',
             '{http://cdlib.org/xtf}tokenize': 'no'
-        }).text = '%s::%s' % (self.get_publication_type(), self.get_dc_title())
+        }).text = '%s::%s' % (self.get_publication_type(), self.dc.find('title').text)
 
         ElementTree.SubElement(meta, 'browse-category', attrib={
             '{http://cdlib.org/xtf}meta': 'true',
@@ -148,13 +146,13 @@ class OCRBuilder():
             '{http://cdlib.org/xtf}meta': 'true',
             '{http://cdlib.org/xtf}facet': 'no',
             '{http://cdlib.org/xtf}tokenize': 'no'
-        }).text = self.get_dc_identifier()
+        }).text = self.dc.find('identifier').text
 
         ElementTree.SubElement(meta, 'display-title', attrib={
             '{http://cdlib.org/xtf}meta': 'true',
             '{http://cdlib.org/xtf}facet': 'no',
             '{http://cdlib.org/xtf}tokenize': 'no'
-        }).text = '%s (%s)' % (self.get_dc_title(), self.get_year_range())
+        }).text = '%s (%s)' % (self.dc.find('title').text, '%s-%s' % (self.min_year, self.max_year))
 
         ElementTree.SubElement(meta, 'display-item', attrib={
             '{http://cdlib.org/xtf}meta': 'true',
@@ -166,7 +164,7 @@ class OCRBuilder():
             '{http://cdlib.org/xtf}meta': 'true',
             '{http://cdlib.org/xtf}facet': 'no',
             '{http://cdlib.org/xtf}tokenize': 'yes'
-        }).text = self.get_dc_description()
+        }).text = self.dc.find('description').text
 
         ElementTree.SubElement(meta, 'year', attrib={
             '{http://cdlib.org/xtf}meta': 'true',
@@ -188,8 +186,10 @@ class OCRBuilder():
 
         return meta
 
-    # in PHP I used mb_convert_encoding($fields[4], "UTF-8", "ISO-8859-1") on 'text'
     def get_position_data_from_pos(self, data_str, scale):
+        '''
+           Note: in PHP I used mb_convert_encoding($fields[4], "UTF-8", "ISO-8859-1") on 'text'
+        '''
         output = []
         for line in data_str.split('\n'):
             fields = line.split('\t')
@@ -202,8 +202,10 @@ class OCRBuilder():
             })
         return output
 
-    # in PHP I used mb_convert_encoding($fields[4], "UTF-8", "ISO-8859-1") on 'text'
     def get_position_data_from_alto(self, xml, scale):
+        '''
+           Note: in PHP I used mb_convert_encoding($fields[4], "UTF-8", "ISO-8859-1") on 'text'
+        '''
         fields = []
         for string in xml.findall('.//{http://www.loc.gov/standards/alto/ns-v2#}String'):
             fields.append({
@@ -236,23 +238,32 @@ class OCRBuilder():
                 output[fields[0]] = fields[1]
         return output 
 
-    #
-    # The words are associative arrays with x, y, w, and h parameters.
-    # Check to see if there should be a newline between them. 
-    #
     def newline_between_words(self, word1, word2):
-        # If word2 is to the left of word1, there should 
-        # be a newline between these words.
+        ''' The words are associative arrays with x, y, w, and h parameters.
+            Check to see if there should be a newline between them. 
+
+            If the left edge of word2 is to the left of the right edge of
+            word1, there should be a newline between these words.
+
+            If any part of word2 is above word1, there should be a
+            newline between the words.
+
+            +--------+ +--------+
+            | WORD 1 | | WORD 2 | = false
+            +--------+ +--------+
+    
+            +--------+ +--------+
+            |        | | WORD 1 |
+            +--------+ +--------+
+                                  = true
+            +--------+ +--------+
+            | WORD 2 | |        |
+            +--------+ +--------+
+        '''
+
         if word2['x'] < (word1['x'] + word1['w']):
             return True
 
-        # If every part of word2 is above word1, there
-        # should be a newline between them. 
-        if word2['y'] + (word2['h'] < word1['y']):
-            return True;
-
-        # If every part of word2 is below word1, there
-        # should be a newline between them.
         if word2['y'] > (word1['y'] + word1['h']):
             return True;
 
