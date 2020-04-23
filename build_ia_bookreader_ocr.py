@@ -394,7 +394,7 @@ class OCRBuilder():
             '{http://cdlib.org/xtf}sectionType': leaf_num
         })
 
-        cropBox = ElementTree.SubElement(leaf, 'cropBox', attrib={ 
+        ElementTree.SubElement(leaf, 'cropBox', attrib={ 
             'x': str(jpg_size[0]),
             'y': str(jpg_size[1]),
             'w': str(jpg_size[0]),
@@ -413,7 +413,7 @@ class OCRBuilder():
 
         l = 0
         for line in leaf_data:
-            ElementTree.SubElement(cropBox, 'line', attrib={
+            ElementTree.SubElement(leaf, 'line', attrib={
                 'l': str(line['l']),
                 't': str(line['t']),
                 'r': str(line['r']),
