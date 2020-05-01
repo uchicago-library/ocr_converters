@@ -23,7 +23,7 @@ def list_mvol_files(local_root, identifier, subdir):
     files = []
     for f in os.listdir(subdir_path):
         files.append('{}{}{}'.format(subdir_path, os.sep, f))
-    return files
+    return sorted(files)
 
 class OCRBuilder():
     def __init__(self, file_dict, min_year, max_year):
