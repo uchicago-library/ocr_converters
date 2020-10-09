@@ -10,7 +10,7 @@ from PIL import Image
 from docopt import docopt
 
 def list_mvol_files(local_root, identifier, subdir):
-    '''Get a list of complete paths to mvol files in ALTO, JPEG, or TIFF
+    '''Get a list of complete paths to mvol files in ALTO, JPEG, POS or TIFF
        directories
     '''
     subdir_path = '{}{}{}{}{}'.format(
@@ -55,7 +55,7 @@ class OCRBuilder():
         return float(self.get_jpg_size(i)[1]) / float(self.get_tif_size(i)[1])
     
     def get_decade(self):
-        return "%s0's" % self.get_year()[0:3]
+        return "%s0s" % self.get_year()[0:3]
 
     def get_publication_type(self):
         return 'student' if self.dc.find('title').text in ('Cap and Gown', 'Daily Maroon') else 'university'
@@ -193,13 +193,16 @@ class OCRBuilder():
         output = []
         for line in data_str.split('\n'):
             fields = line.split('\t')
-            output.append({
-                'x': int(float(fields[0]) * scale),
-                'y': int(float(fields[1]) * scale),
-                'w': int(float(fields[2]) * scale),
-                'h': int(float(fields[3]) * scale),
-                'text': fields[4]
-            })
+            try:
+                output.append({
+                    'x': int(float(fields[0]) * scale),
+                    'y': int(float(fields[1]) * scale),
+                    'w': int(float(fields[2]) * scale),
+                    'h': int(float(fields[3]) * scale),
+                    'text': fields[4]
+                })
+            except ValueError:
+                continue
         return output
 
     def get_position_data_from_alto(self, xml, scale):
@@ -219,7 +222,12 @@ class OCRBuilder():
     
     def get_position_data(self, i):
         scale = self.get_jpg_tif_ratio(i)
-        data_str = open(self.file_dict['ocr_files'][i]).read()
+
+        try:
+            data_str = open(self.file_dict['ocr_files'][i]).read()
+        except UnicodeDecodeError:
+            data_str = open(self.file_dict['ocr_files'][i], encoding='ISO-8859-1').read()
+
         try:
             xml = ElementTree.fromstring(data_str)
         except ElementTree.ParseError:
@@ -402,8 +410,8 @@ class OCRBuilder():
         })
 
         leaf_data = self.leaf_data_from_pos_data(n)
-        scale = self.get_jpg_tif_ratio(n)
-        leaf_data = self.scale_leaf_data(leaf_data, scale)
+        #scale = self.get_jpg_tif_ratio(n)
+        #leaf_data = self.scale_leaf_data(leaf_data, scale)
 
         # Add line spacing info to each line. This has to happen after scaling.
         i = 0
@@ -441,6 +449,15 @@ if __name__=='__main__':
         os.sep
     )
 
+    # get OCR type. 
+    if os.path.isdir('{}/ALTO'.format(mvol_path)):
+        ocr_type = 'ALTO'
+    elif os.path.isdir('{}/POS'.format(mvol_path)):
+        ocr_type = 'POS'
+    else:
+        sys.stderr.write('no OCR data for {}\n'.format(arguments['<identifier>']))
+        sys.exit(1)
+
     o = OCRBuilder({
             'dc': '{}{}.dc.xml'.format(mvol_path, arguments['<identifier>']),
             'jpgs': list_mvol_files(
@@ -451,7 +468,7 @@ if __name__=='__main__':
             'ocr_files': list_mvol_files(
                 arguments['--local-root'], 
                 arguments['<identifier>'],
-                'ALTO'
+                ocr_type
             ),
             'tifs': list_mvol_files(
                 arguments['--local-root'], 
