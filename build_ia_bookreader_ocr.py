@@ -160,11 +160,14 @@ class OCRBuilder():
             '{http://cdlib.org/xtf}tokenize': 'no'
         }).text = 'Volume %s (%s)' % (self.get_volume_number(), self.get_year())
 
-        ElementTree.SubElement(meta, 'browse-description', attrib={
-            '{http://cdlib.org/xtf}meta': 'true',
-            '{http://cdlib.org/xtf}facet': 'no',
-            '{http://cdlib.org/xtf}tokenize': 'yes'
-        }).text = self.dc.find('description').text
+        try:
+            ElementTree.SubElement(meta, 'browse-description', attrib={
+                '{http://cdlib.org/xtf}meta': 'true',
+                '{http://cdlib.org/xtf}facet': 'no',
+                '{http://cdlib.org/xtf}tokenize': 'yes'
+            }).text = self.dc.find('description').text
+        except AttributeError:
+            pass
 
         ElementTree.SubElement(meta, 'year', attrib={
             '{http://cdlib.org/xtf}meta': 'true',
@@ -452,29 +455,52 @@ if __name__=='__main__':
     # get OCR type. 
     if os.path.isdir('{}/ALTO'.format(mvol_path)):
         ocr_type = 'ALTO'
+        dir_type = 'uppercase'
     elif os.path.isdir('{}/POS'.format(mvol_path)):
         ocr_type = 'POS'
+        dir_type = 'uppercase'
+    elif os.path.isdir('{}/xml'.format(mvol_path)):
+        ocr_type = 'xml'
+        dir_type = 'lowercase'
+    elif os.path.isdir('{}/pos'.format(mvol_path)):
+        ocr_type = 'pos'
+        dir_type = 'lowercase'
     else:
         sys.stderr.write('no OCR data for {}\n'.format(arguments['<identifier>']))
         sys.exit(1)
 
+    if dir_type == 'lowercase':
+        jpgs = list_mvol_files(
+            arguments['--local-root'], 
+            arguments['<identifier>'],
+            'jpg'
+        )
+        tifs = list_mvol_files(
+            arguments['--local-root'], 
+            arguments['<identifier>'],
+            'tif'
+        )
+    else:
+        jpgs = list_mvol_files(
+            arguments['--local-root'], 
+            arguments['<identifier>'],
+            'JPEG'
+        )
+        tifs = list_mvol_files(
+            arguments['--local-root'], 
+            arguments['<identifier>'],
+            'TIFF'
+        )
+
     o = OCRBuilder({
             'dc': '{}{}.dc.xml'.format(mvol_path, arguments['<identifier>']),
-            'jpgs': list_mvol_files(
-                arguments['--local-root'], 
-                arguments['<identifier>'],
-                'JPEG'
-            ),
+            'jpgs': jpgs,
             'ocr_files': list_mvol_files(
                 arguments['--local-root'], 
                 arguments['<identifier>'],
                 ocr_type
             ),
-            'tifs': list_mvol_files(
-                arguments['--local-root'], 
-                arguments['<identifier>'],
-                'TIFF'
-            ),
+            'tifs': tifs,
             'txt': '{}{}.struct.txt'.format(mvol_path, arguments['<identifier>'])
         }, 
         int(arguments['<min-year>']),
