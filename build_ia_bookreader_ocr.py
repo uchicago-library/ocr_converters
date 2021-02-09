@@ -213,7 +213,10 @@ class OCRBuilder():
            Note: in PHP I used mb_convert_encoding($fields[4], "UTF-8", "ISO-8859-1") on 'text'
         '''
         fields = []
-        for string in xml.findall('.//{http://www.loc.gov/standards/alto/ns-v2#}String'):
+
+        strings = xml.findall('.//{http://www.loc.gov/standards/alto/ns-v2#}String') or \
+                  xml.findall('.//{http://www.loc.gov/standards/alto/ns-v3#}String')
+        for string in strings:
             fields.append({
                 'x': int(float(string.get('HPOS')) * scale),
                 'y': int(float(string.get('VPOS')) * scale),
@@ -413,6 +416,7 @@ class OCRBuilder():
         })
 
         leaf_data = self.leaf_data_from_pos_data(n)
+
         #scale = self.get_jpg_tif_ratio(n)
         #leaf_data = self.scale_leaf_data(leaf_data, scale)
 
