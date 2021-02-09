@@ -160,11 +160,14 @@ class OCRBuilder():
             '{http://cdlib.org/xtf}tokenize': 'no'
         }).text = 'Volume %s (%s)' % (self.get_volume_number(), self.get_year())
 
-        ElementTree.SubElement(meta, 'browse-description', attrib={
-            '{http://cdlib.org/xtf}meta': 'true',
-            '{http://cdlib.org/xtf}facet': 'no',
-            '{http://cdlib.org/xtf}tokenize': 'yes'
-        }).text = self.dc.find('description').text
+        try:
+            ElementTree.SubElement(meta, 'browse-description', attrib={
+                '{http://cdlib.org/xtf}meta': 'true',
+                '{http://cdlib.org/xtf}facet': 'no',
+                '{http://cdlib.org/xtf}tokenize': 'yes'
+            }).text = self.dc.find('description').text
+        except AttributeError:
+            pass
 
         ElementTree.SubElement(meta, 'year', attrib={
             '{http://cdlib.org/xtf}meta': 'true',
@@ -210,7 +213,10 @@ class OCRBuilder():
            Note: in PHP I used mb_convert_encoding($fields[4], "UTF-8", "ISO-8859-1") on 'text'
         '''
         fields = []
-        for string in xml.findall('.//{http://www.loc.gov/standards/alto/ns-v2#}String'):
+
+        strings = xml.findall('.//{http://www.loc.gov/standards/alto/ns-v2#}String') or \
+                  xml.findall('.//{http://www.loc.gov/standards/alto/ns-v3#}String')
+        for string in strings:
             fields.append({
                 'x': int(float(string.get('HPOS')) * scale),
                 'y': int(float(string.get('VPOS')) * scale),
@@ -410,6 +416,7 @@ class OCRBuilder():
         })
 
         leaf_data = self.leaf_data_from_pos_data(n)
+
         #scale = self.get_jpg_tif_ratio(n)
         #leaf_data = self.scale_leaf_data(leaf_data, scale)
 
