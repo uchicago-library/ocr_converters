@@ -31,24 +31,34 @@ Get the XTF production and development server names from the systems administrat
 You'll find a sequence of directories, one for each digital object. Each will be named something like "mvol-0001-0002-0003"- this is the internal identifier the Preservation Department uses to track these files. 
 
 Inside each directory is a sequence of JPEGs. Each has eight digits with leading zeroes, numbered like:
+```console
 00000001.jpg
 00000002.jpg
 00000003.jpg
 etc.
+```
 
 These are the page images for this item. To add a new item to XTF, use your favorite utility to convert TIFF files to JPEGs, optionally shrinking them to some smaller height. (If you shrink them you can use the <shrink_to_height> option on build_ia_bookreader_ocr.py above.)
 
 Then, each directory contains a thumbnail image- <identifier>.jpg, which is 100px tall, e.g.:
+```console
 mvol-0001-0002-0003.jpg
+```
 
 Each contains a PDF, with all page images:
+```console
 mvol-0001-0002-0003.pdf
+```
 
 The OCR produced above is stored at:
+```console
 mvol-0001-0002-0003.xml
+```
 
 And the text of the document itself, with no OCR information, lives in:
+```console
 mvol-0001-0002-0003.txt
+```
 
 Because input data tends change with each deposit, I write ad-hoc scripts to get data into this format and scp it to the XTF servers. 
 
