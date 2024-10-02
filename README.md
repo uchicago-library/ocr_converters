@@ -83,3 +83,7 @@ To re-index the site, look in the XTF bin directory. To rebuild the index comple
 
 Note that will probably take about a half hour, during which time the site will be unavailable. 
 
+## See Also
+
+For more information about XTF, see [https://xtf.cdlib.org/](https://xtf.cdlib.org/).
+
