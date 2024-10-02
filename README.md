@@ -60,6 +60,17 @@ And the text of the document itself, with no OCR information, lives in:
 mvol-0001-0002-0003.txt
 ```
 
+The entire file layout should look like this:
+```console
+00000001.jpg
+00000002.jpg
+00000003.jpg
+mvol-0001-0002-0003.jpg
+mvol-0001-0002-0003.pdf
+mvol-0001-0002-0003.txt
+mvol-0001-0002-0003.xml
+```
+
 Because input data tends change with each deposit, I write ad-hoc scripts to get data into this format and scp it to the XTF servers. 
 
 ## Re-Indexing the Site
