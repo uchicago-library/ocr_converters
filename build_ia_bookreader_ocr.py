@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
 
 """Usage:
-   build_ia_bookreader_ocr --local-root=<path> <identifier> <min-year> <max-year>
+   build_ia_bookreader_ocr <identifier> <min-year> <max-year> [<shrink_to_height>]
 """
 
-import os, sys
+import os, requests, sqlite3, sys
 import xml.etree.ElementTree as ElementTree
 from PIL import Image
 from docopt import docopt
+
+def get_number_of_images(ark):
+    noid = ark.replace('ark:61001/', '').replace('ark:/61001/', '')
+    p = '/data/digital_collections_ocfl/ark_data/' + '/'.join([noid[i:i+2] for i in range(0, len(noid), 2)])
+    count = 0
+    for f in os.listdir(p + '/v1/content'):
+        if f.startswith('0000'):
+            count += 1
+    return count
 
 def list_mvol_files(local_root, identifier, subdir):
     '''Get a list of complete paths to mvol files in ALTO, JPEG, POS or TIFF
@@ -26,48 +35,53 @@ def list_mvol_files(local_root, identifier, subdir):
     return sorted(files)
 
 class OCRBuilder():
-    def __init__(self, file_dict, min_year, max_year):
-        if not all([k in file_dict for k in ('dc', 'jpgs', 'ocr_files', 'tifs', 'txt')]):
+    def __init__(self, file_dict, min_year, max_year, shrink_to_height):
+        if not all([k in file_dict for k in ('dc', 'ocr_files', 'tifs', 'txt')]):
             raise KeyError
         self.file_dict = file_dict
        
         self.min_year = min_year 
         self.max_year = max_year
 
-        self.dc = ElementTree.fromstring(open(self.file_dict['dc']).read())
+        try:
+            self.shrink_to_height = int(shrink_to_height)
+        except TypeError:
+            self.shrink_to_height = None
+
+        self.dc = ElementTree.fromstring(requests.get(self.file_dict['dc']).content)
 
         ElementTree.register_namespace('xtf', 'http://cdlib.org/xtf')
         
-    def get_jpg_size(self, i):
-        ''' Get the size of a jpeg from the self.file_dict['jpgs'] list.
-        '''
-        return Image.open(self.file_dict['jpgs'][i]).size
-
     def get_tif_size(self, i):
-        ''' Get the size of a tiff from the self.file_dict['tifs'] list.
+        ''' Get the size of a tiff from the self.file_dict['tifs'] list. Note i starts at 0.
         '''
-        return Image.open(self.file_dict['tifs'][i]).size
+        ocr = ElementTree.fromstring(requests.get(self.file_dict['ocr_files'][i]).content)
+        p = ocr.find('./{http://www.loc.gov/standards/alto/ns-v2#}Layout/{http://www.loc.gov/standards/alto/ns-v2#}Page')
+        return (p.attrib['WIDTH'], p.attrib['HEIGHT'])
 
     def get_jpg_tif_ratio(self, i):
         ''' Get the amount that jpegs "shrunk" compared to tiffs, so we
             can rescale OCR data.
         '''
-        return float(self.get_jpg_size(i)[1]) / float(self.get_tif_size(i)[1])
+        if self.shrink_to_height == None:
+            return 1
+        else:
+            return float(self.shrink_to_height) / float(self.get_tif_size(i)[1])
     
     def get_decade(self):
         return "%s0s" % self.get_year()[0:3]
 
     def get_publication_type(self):
-        return 'student' if self.dc.find('title').text in ('Cap and Gown', 'Daily Maroon') else 'university'
+        return 'student' if self.dc.find('{http://purl.org/dc/elements/1.1/}title').text in ('Cap and Gown', 'Daily Maroon') else 'university'
 
     def get_volume_number(self):
-        return int(self.dc.find('identifier').text.split('-')[2].lstrip('0'))
+        return int(self.dc.find('{http://purl.org/dc/elements/1.1/}identifier').text.split('-')[2].lstrip('0'))
 
     def get_year(self):
         ''' Get the year from a date string embedded in DC data- e.g.
             2020-04-22 to 2020.
         '''
-        return self.dc.find('date').text.split('-')[0]
+        return self.dc.find('{http://purl.org/dc/elements/1.1/}date').text.split('/')[0].split('-')[0]
 
     def get_human_readable_date(self):
         months = {
@@ -84,7 +98,7 @@ class OCRBuilder():
             '11': 'November',
             '12': 'December'
         }
-        d = self.dc.find('date').text.split('-')
+        d = self.dc.find('{http://purl.org/dc/elements/1.1/}date').text.split('/')[0].split('-')
         if len(d) == 1: # year
             return d[0]
         elif len(d) == 2: # month  year
@@ -98,19 +112,19 @@ class OCRBuilder():
             '{http://cdlib.org/xtf}meta': 'true',
             '{http://cdlib.org/xtf}facet': 'yes',
             '{http://cdlib.org/xtf}tokenize': 'no'
-        }).text = '%s::Volume %02d' % (self.dc.find('title').text, self.get_volume_number())
+        }).text = '%s::Volume %02d' % (self.dc.find('{http://purl.org/dc/elements/1.1/}title').text, self.get_volume_number())
 
         ElementTree.SubElement(meta, 'facet-title', attrib={
             '{http://cdlib.org/xtf}meta': 'true',
             '{http://cdlib.org/xtf}facet': 'yes',
             '{http://cdlib.org/xtf}tokenize': 'no'
-        }).text = '%s::Volume %02d' % (self.dc.find('title').text, self.get_volume_number())
+        }).text = '%s::Volume %02d' % (self.dc.find('{http://purl.org/dc/elements/1.1/}title').text, self.get_volume_number())
 
         ElementTree.SubElement(meta, 'browse-title', attrib={
             '{http://cdlib.org/xtf}meta': 'true',
             '{http://cdlib.org/xtf}facet': 'no',
             '{http://cdlib.org/xtf}tokenize': 'yes'
-        }).text = '%s Volume %02d' % (self.dc.find('title').text, self.get_volume_number())
+        }).text = '%s Volume %02d' % (self.dc.find('{http://purl.org/dc/elements/1.1/}title').text, self.get_volume_number())
 
         ElementTree.SubElement(meta, 'facet-date', attrib={
             '{http://cdlib.org/xtf}meta': 'true',
@@ -134,7 +148,7 @@ class OCRBuilder():
             '{http://cdlib.org/xtf}meta': 'true',
             '{http://cdlib.org/xtf}facet': 'yes',
             '{http://cdlib.org/xtf}tokenize': 'no'
-        }).text = '%s::%s' % (self.get_publication_type(), self.dc.find('title').text)
+        }).text = '%s::%s' % (self.get_publication_type(), self.dc.find('{http://purl.org/dc/elements/1.1/}title').text)
 
         ElementTree.SubElement(meta, 'browse-category', attrib={
             '{http://cdlib.org/xtf}meta': 'true',
@@ -146,13 +160,13 @@ class OCRBuilder():
             '{http://cdlib.org/xtf}meta': 'true',
             '{http://cdlib.org/xtf}facet': 'no',
             '{http://cdlib.org/xtf}tokenize': 'no'
-        }).text = self.dc.find('identifier').text
+        }).text = self.dc.find('{http://purl.org/dc/elements/1.1/}identifier').text
 
         ElementTree.SubElement(meta, 'display-title', attrib={
             '{http://cdlib.org/xtf}meta': 'true',
             '{http://cdlib.org/xtf}facet': 'no',
             '{http://cdlib.org/xtf}tokenize': 'no'
-        }).text = '%s (%s)' % (self.dc.find('title').text, '%s-%s' % (self.min_year, self.max_year))
+        }).text = '%s (%s)' % (self.dc.find('{http://purl.org/dc/elements/1.1/}title').text, '%s-%s' % (self.min_year, self.max_year))
 
         ElementTree.SubElement(meta, 'display-item', attrib={
             '{http://cdlib.org/xtf}meta': 'true',
@@ -165,7 +179,7 @@ class OCRBuilder():
                 '{http://cdlib.org/xtf}meta': 'true',
                 '{http://cdlib.org/xtf}facet': 'no',
                 '{http://cdlib.org/xtf}tokenize': 'yes'
-            }).text = self.dc.find('description').text
+            }).text = self.dc.find('{http://purl.org/dc/elements/1.1/}description').text
         except AttributeError:
             pass
 
@@ -229,10 +243,8 @@ class OCRBuilder():
     def get_position_data(self, i):
         scale = self.get_jpg_tif_ratio(i)
 
-        try:
-            data_str = open(self.file_dict['ocr_files'][i]).read()
-        except UnicodeDecodeError:
-            data_str = open(self.file_dict['ocr_files'][i], encoding='ISO-8859-1').read()
+        data_str = requests.get(self.file_dict['ocr_files'][i]).content
+        # handle UnicodeDecodeError?
 
         try:
             xml = ElementTree.fromstring(data_str)
@@ -242,7 +254,7 @@ class OCRBuilder():
         return self.get_position_data_from_alto(xml, scale)
 
     def get_structural_dict(self):
-        data_str = open(self.file_dict['txt']).read()
+        data_str = requests.get(self.file_dict['txt']).content
         output = {}
         for line in data_str.split('\n'):
             fields = line.split('\t')
@@ -395,7 +407,12 @@ class OCRBuilder():
     def get_leaf(self, n):
         leaf_num = '%08d' % (n + 1)
         human_readable_leaf_num = str(n + 1)
-        jpg_size = self.get_jpg_size(n)
+        if self.shrink_to_height == None:
+            jpg_size = self.get_tif_size(n)
+        else:
+            s = self.get_tif_size(n)
+            r = self.get_jpg_tif_ratio(n)
+            jpg_size = [float(d) * r for d in s]
 
         leaf = ElementTree.Element('leaf', attrib={
             'leafNum': human_readable_leaf_num,
@@ -449,14 +466,18 @@ class OCRBuilder():
 if __name__=='__main__':
     arguments = docopt(__doc__)
 
-    mvol_path = '{}{}{}{}'.format(
-        arguments['--local-root'],
-        os.sep,
-        arguments['<identifier>'].replace('-', os.sep),
-        os.sep
-    )
+    identifier = arguments['<identifier>']
+
+    con = sqlite3.connect('/data/digital_collections_ocfl/ark_data.db')
+    cur = con.cursor()
+    cur.execute('SELECT ark FROM arks WHERE original_identifier = ?', (identifier,))
+    ark = cur.fetchall()[0][0]
 
     # get OCR type. 
+    ocr_type = 'ALTO'
+    dir_type = 'uppercase'
+
+    '''
     if os.path.isdir('{}/ALTO'.format(mvol_path)):
         ocr_type = 'ALTO'
         dir_type = 'uppercase'
@@ -472,43 +493,30 @@ if __name__=='__main__':
     else:
         sys.stderr.write('no OCR data for {}\n'.format(arguments['<identifier>']))
         sys.exit(1)
+    '''
 
-    if dir_type == 'lowercase':
-        jpgs = list_mvol_files(
-            arguments['--local-root'], 
-            arguments['<identifier>'],
-            'jpg'
-        )
-        tifs = list_mvol_files(
-            arguments['--local-root'], 
-            arguments['<identifier>'],
-            'tif'
-        )
-    else:
-        jpgs = list_mvol_files(
-            arguments['--local-root'], 
-            arguments['<identifier>'],
-            'JPEG'
-        )
-        tifs = list_mvol_files(
-            arguments['--local-root'], 
-            arguments['<identifier>'],
-            'TIFF'
-        )
+    dc_xml = 'http://ocfl.lib.uchicago.edu/{}/file.dc.xml'.format(ark)
 
-    o = OCRBuilder({
-            'dc': '{}{}.dc.xml'.format(mvol_path, arguments['<identifier>']),
-            'jpgs': jpgs,
-            'ocr_files': list_mvol_files(
-                arguments['--local-root'], 
-                arguments['<identifier>'],
-                ocr_type
-            ),
+    ocr_files = []
+    for i in range(1, get_number_of_images(ark) + 1):
+        ocr_files.append('http://ocfl.lib.uchicago.edu/{}/{:08d}/file.xml'.format(ark, i))
+
+    struct_txt = 'http://ocfl.lib.uchicago.edu/{}/file.struct.txt'.format(ark)
+
+    tifs = []
+    for i in range(1, get_number_of_images(ark) + 1):
+        tifs.append('http://ocfl.lib.uchicago.edu/{}/{:08d}/file.tif'.format(ark, i))
+
+    o = OCRBuilder(
+        {
+            'dc': dc_xml,
+            'ocr_files': ocr_files,
             'tifs': tifs,
-            'txt': '{}{}.struct.txt'.format(mvol_path, arguments['<identifier>'])
+            'txt': struct_txt
         }, 
         int(arguments['<min-year>']),
-        int(arguments['<max-year>'])
+        int(arguments['<max-year>']),
+        arguments['<shrink_to_height>']
     )
     
     xtf_converted_book = o.get_xtf_converted_book()
