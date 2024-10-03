@@ -2,6 +2,8 @@
 
 This repository contains a script to convert simple OCR data, in the form of a word list and page coordinates, into the format needed by the Internet Archive Bookreader.
 
+Please note that the script contains hardcoded references to the LDR pair tree and the ark_data.db database. Coordinate with the systems administrators to get access to these locations in the filesystem and adjust the script before proceeding. 
+
 To run this script, start by setting up a python virtual environment. Activate the environment, clone this repo, and install its dependencies:
 
 ```console
